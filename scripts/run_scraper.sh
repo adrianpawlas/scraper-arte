@@ -48,19 +48,19 @@ cd "${PROJECT_DIR}"
 
 # --- Load environment variables ---
 if [ -f ".env" ]; then
-    echo "✅ .env file found"
-    export $(grep -v '^\s*#' .env | grep -v '^\s*$' | xargs)
+    echo "✅ .env file found, loading..."
+    set -a
+    source .env
+    set +a
+elif [ -n "${SUPABASE_URL:-}" ] && [ -n "${SUPABASE_ANON_KEY:-}" ]; then
+    echo "✅ Environment variables already set (e.g., GitHub Actions)"
 else
-    echo "❌ ERROR: .env file not found at ${PROJECT_DIR}/.env"
+    echo "❌ ERROR: SUPABASE_URL or SUPABASE_ANON_KEY not set"
+    echo "   Local: create a .env file (see .env.example)"
+    echo "   CI:    add them as GitHub Secrets"
     exit 1
 fi
-
-# --- Validate required env vars ---
-if [ -z "${SUPABASE_URL:-}" ] || [ -z "${SUPABASE_ANON_KEY:-}" ]; then
-    echo "❌ ERROR: SUPABASE_URL or SUPABASE_ANON_KEY not set in .env"
-    exit 1
-fi
-echo "✅ Environment variables loaded"
+echo "✅ Environment variables loaded
 
 # --- Install JS dependencies if needed ---
 if [ ! -d "node_modules" ]; then

@@ -49,10 +49,9 @@ async function main() {
   const skipEmbeddings = process.env.SKIP_EMBEDDINGS === 'true';
 
   if (!supabaseUrl || !supabaseKey) {
-    console.error('❌ Missing SUPABASE_URL or SUPABASE_ANON_KEY in .env file');
-    console.error('   Create a .env file with:');
-    console.error('   SUPABASE_URL=https://yqawmzggcgpeyaaynrjk.supabase.co');
-    console.error('   SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIs...');
+    console.error('❌ Missing SUPABASE_URL or SUPABASE_ANON_KEY');
+    console.error('   Local: create a .env file (see .env.example)');
+    console.error('   CI:    add them as GitHub Secrets');
     process.exit(1);
   }
 
