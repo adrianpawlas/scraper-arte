@@ -1,0 +1,13 @@
+node_modules/
+dist/
+.env
+downloads/
+*.log
+logs/
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# Python virtual environment
+venv/
+.venv/
