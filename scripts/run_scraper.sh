@@ -65,7 +65,7 @@ echo "✅ Environment variables loaded"
 # --- Install JS dependencies if needed ---
 if [ ! -d "node_modules" ]; then
     echo "📦 Installing Node.js dependencies..."
-    ${NPM_BIN} ci --omit=dev 2>&1 || ${NPM_BIN} install --omit=dev 2>&1
+    ${NPM_BIN} ci 2>&1 || ${NPM_BIN} install 2>&1
     echo "✅ Dependencies installed"
 else
     echo "✅ Node.js dependencies already installed"
