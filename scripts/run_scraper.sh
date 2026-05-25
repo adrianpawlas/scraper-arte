@@ -82,6 +82,11 @@ if [ -n "${PYTHON_BIN}" ] && [ -f "requirements.txt" ]; then
     }
 fi
 
+# --- Ensure Playwright browser is available (idempotent - skips if already cached) ---
+echo "🎭 Ensuring Playwright browser is installed..."
+${NPM_BIN} exec playwright install chromium 2>&1
+echo "✅ Playwright browser ready"
+
 # --- Build TypeScript ---
 echo "🔨 Building TypeScript..."
 ${NPM_BIN} run build 2>&1
