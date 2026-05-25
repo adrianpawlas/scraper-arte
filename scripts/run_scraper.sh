@@ -49,9 +49,20 @@ cd "${PROJECT_DIR}"
 # --- Load environment variables ---
 if [ -f ".env" ]; then
     echo "✅ .env file found, loading..."
-    set -a
-    source .env
-    set +a
+    # Safe parsing: read key=value pairs without shell interpretation
+    # Handles special characters in values (unlike 'source .env')
+    while IFS='=' read -r key value; do
+      # Skip empty lines and comments
+      [ -z "$key" ] && continue
+      [ "${key#\#}" != "$key" ] && continue
+      # Strip optional surrounding quotes from value
+      val="$value"
+      case "$val" in
+        \"*\") val="${val%\"}"; val="${val#\"}" ;;
+        \'*\') val="${val%'}"; val="${val#'}" ;;
+      esac
+      export "$key=$val"
+    done < .env
 elif [ -n "${SUPABASE_URL:-}" ] && [ -n "${SUPABASE_ANON_KEY:-}" ]; then
     echo "✅ Environment variables already set (e.g., GitHub Actions)"
 else
@@ -60,7 +71,7 @@ else
     echo "   CI:    add them as GitHub Secrets"
     exit 1
 fi
-echo "✅ Environment variables loaded
+echo "✅ Environment variables loaded"
 
 # --- Install JS dependencies if needed ---
 if [ ! -d "node_modules" ]; then
