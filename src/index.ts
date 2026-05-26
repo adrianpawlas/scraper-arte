@@ -253,7 +253,9 @@ async function main() {
   console.log('═══════════════════════════════════════════\n');
 
   // Save records to JSON file for inspection
-  const outputPath = path.join(__dirname, '..', 'downloads', 'products.json');
+  const outputDir = path.join(__dirname, '..', 'downloads');
+  const outputPath = path.join(outputDir, 'products.json');
+  fs.mkdirSync(outputDir, { recursive: true });
   fs.writeFileSync(outputPath, JSON.stringify(records, null, 2));
   console.log(`💾 Full product data saved to: ${outputPath}`);
 }
