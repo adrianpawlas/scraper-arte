@@ -40,7 +40,8 @@ fi
 echo "✅ npm: $(${NPM_BIN} --version)"
 
 if [ -z "${PYTHON_BIN}" ]; then
-    echo "⚠ WARNING: python3 not found. Embeddings will be skipped."
+    echo "❌ ERROR: python3 not found. Embeddings are required."
+    exit 1
 fi
 
 # --- Change to project directory ---
@@ -82,8 +83,8 @@ else
     echo "✅ Node.js dependencies already installed"
 fi
 
-# --- Install Python dependencies if needed ---
-if [ -n "${PYTHON_BIN}" ] && [ -f "requirements.txt" ]; then
+# --- Install Python dependencies ---
+if [ -f "requirements.txt" ]; then
     echo "🐍 Checking Python dependencies..."
     ${PYTHON_BIN} -c "import torch, transformers, PIL, requests" 2>/dev/null && \
         echo "✅ Python dependencies already installed" || {

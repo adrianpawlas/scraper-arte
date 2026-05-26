@@ -46,7 +46,6 @@ async function main() {
   const supabaseUrl = process.env.SUPABASE_URL;
   const supabaseKey = process.env.SUPABASE_ANON_KEY;
   const maxProducts = parseInt(process.env.MAX_PRODUCTS || 'Infinity', 10);
-  const skipEmbeddings = process.env.SKIP_EMBEDDINGS === 'true';
 
   if (!supabaseUrl || !supabaseKey) {
     console.error('❌ Missing SUPABASE_URL or SUPABASE_ANON_KEY');
@@ -69,10 +68,11 @@ async function main() {
   }
   console.log('✅ Supabase connection OK\n');
 
-  if (!skipEmbeddings && !embeddingService.isReady()) {
-    console.warn('⚠ Embedding service not ready. Install Python dependencies:');
-    console.warn('   pip install -r requirements.txt');
-    console.warn('   Proceeding WITHOUT embeddings...\n');
+  // Embeddings are mandatory — fail early if not available
+  if (!embeddingService.isReady()) {
+    console.error('❌ Embedding service is not ready.');
+    console.error('   Install Python dependencies: pip install -r requirements.txt');
+    process.exit(1);
   }
 
   // ==========================================
@@ -90,63 +90,59 @@ async function main() {
   }
 
   // ==========================================
-  // PHASE 2: Generate embeddings
+  // PHASE 2: Generate embeddings (mandatory)
   // ==========================================
+  console.log('\n🧠 PHASE 2: Generating embeddings\n');
+
   let imageEmbeddings: number[][] = [];
   let infoEmbeddings: number[][] = [];
 
-  if (!skipEmbeddings && embeddingService.isReady()) {
-    console.log('\n🧠 PHASE 2: Generating embeddings\n');
+  // Generate image embeddings
+  const imageUrls = scrapedProducts.map((p) => p.mainImageUrl).filter(Boolean);
+  console.log(`📸 Processing ${imageUrls.length} product images for embeddings...`);
 
-    // Generate image embeddings
-    const imageUrls = scrapedProducts.map((p) => p.mainImageUrl).filter(Boolean);
-    console.log(`📸 Processing ${imageUrls.length} product images for embeddings...`);
-
-    try {
-      // Process in batches of 10 to avoid overwhelming the model
-      const batchSize = 10;
-      for (let i = 0; i < imageUrls.length; i += batchSize) {
-        const batch = imageUrls.slice(i, i + batchSize);
-        console.log(`  Image batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(imageUrls.length / batchSize)}`);
-        const batchEmbeddings = await embeddingService.generateImageEmbeddings(batch);
-        imageEmbeddings.push(...batchEmbeddings);
-      }
-      console.log(`✅ Generated ${imageEmbeddings.length} image embeddings`);
-    } catch (error) {
-      console.error(`  ⚠ Failed to generate image embeddings:`, (error as Error).message);
+  try {
+    // Process in batches of 10 to avoid overwhelming the model
+    const batchSize = 10;
+    for (let i = 0; i < imageUrls.length; i += batchSize) {
+      const batch = imageUrls.slice(i, i + batchSize);
+      console.log(`  Image batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(imageUrls.length / batchSize)}`);
+      const batchEmbeddings = await embeddingService.generateImageEmbeddings(batch);
+      imageEmbeddings.push(...batchEmbeddings);
     }
+    console.log(`✅ Generated ${imageEmbeddings.length} image embeddings`);
+  } catch (error) {
+    console.error(`  ⚠ Failed to generate image embeddings:`, (error as Error).message);
+  }
 
-    // Generate text embeddings (info_embedding)
-    const textInfos = scrapedProducts.map((p) => {
-      const jsonLd = p.jsonLd;
-      const product = p.shopifyProduct;
-      const parts = [
-        product.title,
-        jsonLd?.description || '',
-        mapCategory(product.product_type),
-        ...product.tags,
-        ...product.variants
-          .filter((v) => v.available)
-          .map((v) => `${v.title}: ${v.price} EUR`),
-      ];
-      return sanitizeForEmbedding(parts.filter(Boolean).join('. '));
-    });
+  // Generate text embeddings (info_embedding)
+  const textInfos = scrapedProducts.map((p) => {
+    const jsonLd = p.jsonLd;
+    const product = p.shopifyProduct;
+    const parts = [
+      product.title,
+      jsonLd?.description || '',
+      mapCategory(product.product_type),
+      ...product.tags,
+      ...product.variants
+        .filter((v) => v.available)
+        .map((v) => `${v.title}: ${v.price} EUR`),
+    ];
+    return sanitizeForEmbedding(parts.filter(Boolean).join('. '));
+  });
 
-    console.log(`\n📝 Processing ${textInfos.length} product descriptions for text embeddings...`);
-    try {
-      const batchSize = 20;
-      for (let i = 0; i < textInfos.length; i += batchSize) {
-        const batch = textInfos.slice(i, i + batchSize);
-        console.log(`  Text batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(textInfos.length / batchSize)}`);
-        const batchEmbeddings = await embeddingService.generateTextEmbeddings(batch);
-        infoEmbeddings.push(...batchEmbeddings);
-      }
-      console.log(`✅ Generated ${infoEmbeddings.length} text embeddings`);
-    } catch (error) {
-      console.error(`  ⚠ Failed to generate text embeddings:`, (error as Error).message);
+  console.log(`\n📝 Processing ${textInfos.length} product descriptions for text embeddings...`);
+  try {
+    const batchSize = 20;
+    for (let i = 0; i < textInfos.length; i += batchSize) {
+      const batch = textInfos.slice(i, i + batchSize);
+      console.log(`  Text batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(textInfos.length / batchSize)}`);
+      const batchEmbeddings = await embeddingService.generateTextEmbeddings(batch);
+      infoEmbeddings.push(...batchEmbeddings);
     }
-  } else if (skipEmbeddings) {
-    console.log('\n⏭️  PHASE 2: Embeddings skipped (SKIP_EMBEDDINGS=true)\n');
+    console.log(`✅ Generated ${infoEmbeddings.length} text embeddings`);
+  } catch (error) {
+    console.error(`  ⚠ Failed to generate text embeddings:`, (error as Error).message);
   }
 
   stats.embedded = imageEmbeddings.length > 0 ? imageEmbeddings.length : infoEmbeddings.length;
