@@ -101,7 +101,7 @@ export class ArteScraper {
     return retry(async () => {
       const page = await this.browser!.newPage();
       try {
-        await page.goto(url, { waitUntil: 'networkidle', timeout: 30000 });
+        await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 15000 });
 
         // Extract JSON-LD data
         const jsonLd = await page.evaluate(() => {
@@ -127,7 +127,7 @@ export class ArteScraper {
       } finally {
         await page.close();
       }
-    }, 2, 1000);
+    }, 3, 2000);
   }
 
   /**
