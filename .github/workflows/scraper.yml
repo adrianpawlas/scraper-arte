@@ -36,7 +36,6 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-          cache: 'pip'
 
       - name: Install Node.js dependencies
         run: npm ci
@@ -52,6 +51,15 @@ jobs:
           restore-keys: |
             huggingface-siglip-${{ runner.os }}
             huggingface-
+
+      - name: Cache pip dependencies
+        if: env.SKIP_EMBEDDINGS == 'false'
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-${{ runner.os }}-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            pip-${{ runner.os }}-
 
       - name: Install Python dependencies (for embeddings)
         if: env.SKIP_EMBEDDINGS == 'false'
