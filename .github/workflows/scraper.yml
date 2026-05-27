@@ -37,8 +37,21 @@ jobs:
       - name: Install Node.js dependencies
         run: npm ci
 
-      - name: Install Playwright browser + system deps
-        run: npx playwright install --with-deps chromium
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Install Playwright system dependencies
+        # apt is fast when packages are already installed; we still need them
+        # on fresh runners even when the browser binary is cached
+        run: npx playwright install-deps chromium
+
+      - name: Install Playwright Chromium
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: npx playwright install chromium
 
       - name: Cache HuggingFace models
         uses: actions/cache@v4
